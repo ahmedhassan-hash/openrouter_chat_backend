@@ -3,14 +3,14 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const config = {
-  openai: {
-    apiKey: process.env.OPENAI_API_KEY ?? "",
-  },
   openrouter: {
     apiKey: process.env.OPENROUTER_API_KEY ?? "",
   },
   huggingFace: {
     apiKey: process.env.HUGGING_FACE_ACCESS_TOKEN ?? "",
+  },
+  tavily: {
+    apiKey: process.env.TAVILY_API_KEY ?? "",
   },
   database: {
     url: process.env.DATABASE_URL ?? "",

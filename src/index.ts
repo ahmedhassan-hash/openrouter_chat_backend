@@ -52,6 +52,13 @@ serve({
 });
 
 console.log(`✅ Server running at http://localhost:${port}`);
-console.log(`📝 API endpoints:`);
-console.log(`   POST /api/scrape - Scrape a URL`);
-console.log(`   POST /api/chat - Chat with scraped content`);
+console.log(`\n📝 API Endpoints:`);
+console.log(`   POST /api/scrape        - Scrape a website`);
+console.log(`   POST /api/chat          - Chat (non-streaming)`);
+console.log(`   POST /api/chat/stream   - Chat (streaming) ⭐ Recommended`);
+console.log(`\n💡 Features:`);
+console.log(`   - Simple Chat Mode (default)`);
+console.log(`   - RAG Mode (scraped content)`);
+console.log(`   - Web Search Tool (optional)`);
+console.log(`   - Real-time Streaming`);
+console.log(`\n📚 Documentation: See API.md for frontend integration examples`);
