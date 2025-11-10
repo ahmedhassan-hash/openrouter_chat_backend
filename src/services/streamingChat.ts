@@ -12,15 +12,21 @@ export interface StreamEvent {
     | "error"
     | "searching_rag"
     | "found_documents"
-    | "usage"; // Token usage info
+    | "usage";
   content?: string;
   data?: any;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
 }
 
 export async function* streamAnswer(
   question: string,
   useRAG = true,
-  enableWebSearch = false
+  enableWebSearch = false,
+  chatHistory: ChatMessage[] = []
 ): AsyncGenerator<StreamEvent> {
   try {
     if (!useRAG) {
@@ -29,10 +35,21 @@ export async function* streamAnswer(
         content: "Thinking...",
       };
 
+      const historyMessages = chatHistory.map((msg) => {
+        if (msg.role === "user") {
+          return new HumanMessage(msg.content);
+        } else if (msg.role === "assistant") {
+          return new SystemMessage(msg.content);
+        } else {
+          return new SystemMessage(msg.content);
+        }
+      });
+
       const messages: any[] = [
         new SystemMessage(
           "You are a helpful AI assistant. Answer questions naturally and helpfully. When you need current information or real-time data, use the web_search tool."
         ),
+        ...historyMessages,
         new HumanMessage(question),
       ];
 
@@ -50,7 +67,6 @@ export async function* streamAnswer(
       let totalTokens = 0;
 
       for await (const chunk of stream) {
-        // Track token usage if available
         if (chunk.usage_metadata) {
           inputTokens = chunk.usage_metadata.input_tokens || 0;
           outputTokens = chunk.usage_metadata.output_tokens || 0;
@@ -188,8 +204,19 @@ Always be concise and accurate.
 Context:
 ${context}`;
 
+    const historyMessages = chatHistory.map((msg) => {
+      if (msg.role === "user") {
+        return new HumanMessage(msg.content);
+      } else if (msg.role === "assistant") {
+        return new SystemMessage(msg.content);
+      } else {
+        return new SystemMessage(msg.content);
+      }
+    });
+
     const stream = await chatModel.stream([
       new SystemMessage(systemPrompt),
+      ...historyMessages,
       new HumanMessage(question),
     ]);
 

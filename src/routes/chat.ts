@@ -11,6 +11,7 @@ chatRouter.post("/chat", async (c) => {
       message,
       mode = "simple",
       enableWebSearch = false,
+      chatHistory = [],
     } = await c.req.json();
 
     if (!message) {
@@ -21,10 +22,15 @@ chatRouter.post("/chat", async (c) => {
     console.log(
       `Processing chat message in ${mode} mode${
         enableWebSearch ? " with web search" : ""
-      }: ${message}`
+      } with ${chatHistory.length} history messages: ${message}`
     );
 
-    const result = await answerQuestion(message, useRAG, enableWebSearch);
+    const result = await answerQuestion(
+      message,
+      useRAG,
+      enableWebSearch,
+      chatHistory
+    );
 
     return c.json({
       success: true,
@@ -51,6 +57,7 @@ chatRouter.post("/chat/stream", async (c) => {
       message,
       mode = "simple",
       enableWebSearch = false,
+      chatHistory = [],
     } = await c.req.json();
 
     if (!message) {
@@ -61,7 +68,7 @@ chatRouter.post("/chat/stream", async (c) => {
     console.log(
       `Streaming chat message in ${mode} mode${
         enableWebSearch ? " with web search" : ""
-      }: ${message}`
+      } with ${chatHistory.length} history messages: ${message}`
     );
 
     return stream(c, async (stream) => {
@@ -69,7 +76,8 @@ chatRouter.post("/chat/stream", async (c) => {
         for await (const event of streamAnswer(
           message,
           useRAG,
-          enableWebSearch
+          enableWebSearch,
+          chatHistory
         )) {
           await stream.write(`data: ${JSON.stringify(event)}\n\n`);
         }

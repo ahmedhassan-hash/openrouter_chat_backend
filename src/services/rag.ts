@@ -3,17 +3,34 @@ import { chatModel } from "./chat.js";
 import { searchSimilarDocuments } from "./vectorStore.js";
 import { performWebSearch, webSearchToolDefinition } from "./webSearch.js";
 
+export interface ChatMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
+}
+
 export async function answerQuestion(
   question: string,
   useRAG = true,
-  enableWebSearch = false
+  enableWebSearch = false,
+  chatHistory: ChatMessage[] = []
 ) {
   try {
     if (!useRAG) {
+      const historyMessages = chatHistory.map((msg) => {
+        if (msg.role === "user") {
+          return new HumanMessage(msg.content);
+        } else if (msg.role === "assistant") {
+          return new SystemMessage(msg.content);
+        } else {
+          return new SystemMessage(msg.content);
+        }
+      });
+
       const messages: any[] = [
         new SystemMessage(
           "You are a helpful AI assistant. Answer questions naturally and helpfully. When you need current information or real-time data, use the web_search tool."
         ),
+        ...historyMessages,
         new HumanMessage(question),
       ];
 
@@ -85,8 +102,20 @@ Always be concise and accurate.
 Context:
 ${context}`;
 
+    // Convert chat history to LangChain message format for RAG mode
+    const historyMessages = chatHistory.map((msg) => {
+      if (msg.role === "user") {
+        return new HumanMessage(msg.content);
+      } else if (msg.role === "assistant") {
+        return new SystemMessage(msg.content);
+      } else {
+        return new SystemMessage(msg.content);
+      }
+    });
+
     const response = await chatModel.invoke([
       new SystemMessage(systemPrompt),
+      ...historyMessages,
       new HumanMessage(question),
     ]);
 
