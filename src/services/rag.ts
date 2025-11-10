@@ -4,7 +4,7 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 
 export async function answerQuestion(question: string) {
   try {
-    const relevantDocs = await searchSimilarDocuments(question, 4);
+    const relevantDocs = await searchSimilarDocuments(question, 3000);
 
     if (relevantDocs.length === 0) {
       return {

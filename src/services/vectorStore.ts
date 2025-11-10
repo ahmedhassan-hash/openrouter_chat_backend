@@ -11,13 +11,19 @@ export async function initializeVectorStore() {
   }
 
   try {
+    console.log("🔄 Initializing connection to Neon DB...");
     vectorStore = await NeonPostgres.initialize(embeddings, {
       connectionString: config.database.url,
     });
     console.log("✅ Vector store initialized with Neon DB (pgvector)");
     return vectorStore;
   } catch (error) {
-    console.error("Failed to initialize vector store:", error);
+    console.error("❌ Failed to initialize vector store:", error);
+    if (error instanceof Error) {
+      if (error.message.includes("fetch failed") || error.message.includes("ETIMEDOUT")) {
+        throw new Error("Database connection timeout. The Neon database may be sleeping or unreachable. Please try again in a few moments.");
+      }
+    }
     throw error;
   }
 }

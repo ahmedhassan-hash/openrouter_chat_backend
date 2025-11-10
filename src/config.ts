@@ -9,6 +9,9 @@ export const config = {
   openrouter: {
     apiKey: process.env.OPENROUTER_API_KEY ?? "",
   },
+  huggingFace: {
+    apiKey: process.env.HUGGING_FACE_ACCESS_TOKEN ?? "",
+  },
   database: {
     url: process.env.DATABASE_URL ?? "",
   },
@@ -19,8 +22,8 @@ export const config = {
 };
 
 const requiredEnvVars = [
-  "OPENAI_API_KEY",
   "OPENROUTER_API_KEY",
+  "HUGGING_FACE_ACCESS_TOKEN",
   "DATABASE_URL",
 ];
 for (const envVar of requiredEnvVars) {
