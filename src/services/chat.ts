@@ -14,8 +14,8 @@ export const chatModel = new ChatOpenAI({
   // modelName: "openai/gpt-oss-20b:free",
   // modelName: "meta-llama/llama-3.3-8b-instruct:free",
   // modelName: "mistralai/mistral-7b-instruct:free",
-  modelName: "z-ai/glm-4.5-air:free",
-  // modelName: "google/gemini-2.0-flash-exp:free",
+  // modelName: "z-ai/glm-4.5-air:free",
+  modelName: "google/gemini-2.0-flash-exp:free",
 
   temperature: 0.7,
   streamUsage: true,
