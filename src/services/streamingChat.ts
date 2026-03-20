@@ -66,7 +66,11 @@ export async function* streamAnswer(
       let outputTokens = 0;
       let totalTokens = 0;
 
+      // Accumulate tool call arguments across streaming chunks
+      const toolCallArgs: Record<number, { id: string; name: string; arguments: string }> = {};
+
       for await (const chunk of stream) {
+
         if (chunk.usage_metadata) {
           inputTokens = chunk.usage_metadata.input_tokens || 0;
           outputTokens = chunk.usage_metadata.output_tokens || 0;
@@ -85,50 +89,13 @@ export async function* streamAnswer(
         if (chunk.additional_kwargs?.tool_calls) {
           hasToolCalls = true;
           for (const toolCall of chunk.additional_kwargs.tool_calls) {
-            if (toolCall.function.name === "web_search") {
-              const args = JSON.parse(toolCall.function.arguments);
-
-              yield {
-                type: "tool_call",
-                content: `Searching the web for: ${args.query}`,
-                data: { tool: "web_search", query: args.query },
-              };
-
-              const searchResults = await performWebSearch(args.query);
-
-              yield {
-                type: "tool_call",
-                content: `Found ${searchResults.results?.length || 0} results`,
-                data: { tool: "web_search", results: searchResults },
-              };
-
-              messages.push(chunk);
-              messages.push({
-                role: "tool",
-                content: JSON.stringify(searchResults),
-                tool_call_id: toolCall.id,
-              });
-
-              yield {
-                type: "status",
-                content: "Analyzing search results...",
-              };
-
-              const finalStream = await chatModel.stream(messages);
-              for await (const finalChunk of finalStream) {
-                const content =
-                  typeof finalChunk.content === "string"
-                    ? finalChunk.content
-                    : "";
-                if (content) {
-                  fullResponse += content;
-                  yield {
-                    type: "token",
-                    content,
-                  };
-                }
-              }
+            const idx = toolCall.index ?? 0;
+            if (!toolCallArgs[idx]) {
+              toolCallArgs[idx] = { id: toolCall.id || "", name: toolCall.function?.name || "", arguments: "" };
             }
+            if (toolCall.id) toolCallArgs[idx].id = toolCall.id;
+            if (toolCall.function?.name) toolCallArgs[idx].name = toolCall.function.name;
+            if (toolCall.function?.arguments) toolCallArgs[idx].arguments += toolCall.function.arguments;
           }
         } else {
           const content =
@@ -139,6 +106,68 @@ export async function* streamAnswer(
               type: "token",
               content,
             };
+          }
+        }
+      }
+
+      // After stream completes, process accumulated tool calls
+      if (hasToolCalls) {
+        for (const [, toolCall] of Object.entries(toolCallArgs)) {
+          if (toolCall.name === "web_search") {
+            const args = JSON.parse(toolCall.arguments);
+
+            yield {
+              type: "tool_call",
+              content: `Searching the web for: ${args.query}`,
+              data: { tool: "web_search", query: args.query },
+            };
+
+            const searchResults = await performWebSearch(args.query);
+
+            yield {
+              type: "tool_call",
+              content: `Found ${searchResults.results?.length || 0} results`,
+              data: { tool: "web_search", results: searchResults },
+            };
+
+            // Build the assistant message with tool call for context
+            messages.push({
+              role: "assistant",
+              content: "",
+              additional_kwargs: {
+                tool_calls: [{
+                  id: toolCall.id,
+                  type: "function",
+                  function: { name: toolCall.name, arguments: toolCall.arguments },
+                }],
+              },
+            });
+            messages.push({
+              role: "tool",
+              content: JSON.stringify(searchResults),
+              tool_call_id: toolCall.id,
+            });
+
+            yield {
+              type: "status",
+              content: "Analyzing search results...",
+            };
+
+            fullResponse = "";
+            const finalStream = await chatModel.stream(messages);
+            for await (const finalChunk of finalStream) {
+              const content =
+                typeof finalChunk.content === "string"
+                  ? finalChunk.content
+                  : "";
+              if (content) {
+                fullResponse += content;
+                yield {
+                  type: "token",
+                  content,
+                };
+              }
+            }
           }
         }
       }
